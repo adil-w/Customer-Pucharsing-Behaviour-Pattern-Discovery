@@ -1,7 +1,7 @@
 library(readr)
 library(tidyverse)
 
-
+#####
 customer <- read.csv('olist_customers_dataset.csv')
 order_item <- read.csv('olist_order_items_dataset.csv')
 order_item <- read.csv('olist_order_items_dataset.csv')
