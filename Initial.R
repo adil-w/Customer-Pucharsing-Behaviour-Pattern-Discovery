@@ -21,6 +21,8 @@ transaction <- left_join(p,order_payment, by = "order_id")
 View(p)
 head(p)
 
+## Clean data
+
 
 
 ## Assoction Rule
@@ -31,8 +33,12 @@ head(p)
 p2 = p %>% select(-customer_id, -customer_unique_id, -customer_city, -customer_city, 
                  -customer_state,-order_id:-order_estimated_delivery_date, 
                  -product_id:-shipping_limit_date, -product_category_name)
+View(p2)
 glimpse(p)
 skimr::skim(p)
+class(p2)
+is.list(p2)
+
 
 # Clean missing values
 p = p %>% replace_na(list(order_item_id=0))
@@ -44,12 +50,7 @@ corrplot(p_cor, type="upper")
 corrplot(p_cor, method="number")
 
 # Fit PCA Model
-p_pca = prcomp(p, center=T, scale = FALSE)
-class(p_pca)
-summary(p_pca)
-is.list(p_pca)
-names(p_pca)
-p_pca$rotation
+
 
 ## EFA
 
