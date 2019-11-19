@@ -31,3 +31,31 @@ transaction_cor = cor(transaction)
 cortest.bartlett(transaction_cor, nrow(transaction))
 KMO(transaction_cor)
 
+# Number of factors 
+
+pca_eval = prcomp(transaction, center=T, scale=T)
+fviz_screeplot(pca_eval, addlabels=T)
+
+
+# Parallel plot 
+fa_plot = fa.parallel(transaction, fm="ml", fa="fa")
+fa_plot
+
+sum(fa_plot$fa.values > .7)
+
+
+#Apply the model 
+fa1 = fa(transaction, nfactors=2, rotate = "oblimin", fm = "ml")
+
+print(fa1, cut=.3)
+
+
+#Assess Fit 
+mf1 = transaction %>% select(price,  product_weight_g, product_height_cm, product_length_cm,
+                         payment_value)
+psych::alpha(mf1)
+
+
+
+
+
