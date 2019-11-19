@@ -1,6 +1,10 @@
 # This file intends to use association rules
 # to explore the recognize the transactional pattern 
 # to future determine the co-occurence between items.
+<<<<<<< HEAD
+# The application of the association rules is to 
+# 
+=======
 
 library(tidyverse)
 library(arules)
@@ -74,3 +78,4 @@ summary(rules)
 
 
 
+>>>>>>> cea335b1c2207b460a28c58d74442c818da65ad9
