@@ -3,5 +3,3 @@
 # to future determine the co-occurence between items.
 # The application of the association rules is to 
 # 
-
-
