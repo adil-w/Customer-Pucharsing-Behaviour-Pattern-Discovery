@@ -97,8 +97,8 @@ quality(rules1) = cbind(quality(rules1),rule_chisq)
 inspect(head(rules1,5))
 
 
-
-
+## if we wanna visulize the categories purchased at high frequency
+View(transaction)
 
 
 
