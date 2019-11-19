@@ -2,6 +2,7 @@
 # install the packages
 library(readr)
 library(tidyverse)
+library(skimr)
 
 # load the datasets
 customer <- read.csv('data/olist_customers_dataset.csv')
@@ -21,6 +22,51 @@ location <- read.csv('data/olist_geolocation_dataset.csv')
 
 
 
+<<<<<<< HEAD
+#######
 p<- left_join(left_join(left_join(customer, order, by = 'customer_id'),order_item,by = 'order_id'),order_product, by = 'product_id')
 transaction <- left_join(p,order_payment, by = "order_id")
+View(p)
+head(p)
+
+## Clean data
+
+
+
+## Assoction Rule
+
+
+## PCA
+# Keep only numerica columns
+p2 = p %>% select(-customer_id, -customer_unique_id, -customer_city, -customer_city, 
+                 -customer_state,-order_id:-order_estimated_delivery_date, 
+                 -product_id:-shipping_limit_date, -product_category_name)
+View(p2)
+glimpse(p)
+skimr::skim(p)
+class(p2)
+is.list(p2)
+
+
+# Clean missing values
+p = p %>% replace_na(list(order_item_id=0))
+
+# Correlation Matrix
+p_cor = cor(p)
+p_cor
+corrplot(p_cor, type="upper")
+corrplot(p_cor, method="number")
+
+# Fit PCA Model
+
+
+## EFA
+
+
+
+
+=======
+p<- left_join(left_join(left_join(customer, order, by = 'customer_id'),order_item,by = 'order_id'),order_product, by = 'product_id')
+transaction <- left_join(p,order_payment, by = "order_id")
+>>>>>>> 64d3cc9a9ebc26c4284c0d608486a8e5e123714a
 
