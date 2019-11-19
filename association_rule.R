@@ -32,6 +32,8 @@ tr3 = transaction %>%
   select(order_id,product_category_name) %>% 
   na.omit(tr3$product_category_name)
 readr::write_csv(tr3,"data/tran3.csv")
+dim(tr3)
+length(unique(tr3$order_id))
 
 # get the data into the transaction format
 t2 = read.transactions("data/tran2.csv",
@@ -51,10 +53,17 @@ t3 = read.transactions("data/tran3.csv",
                        rm.duplicates = T
                        
 )
+summary(t3)
+hist(size(t3))
+itemFrequency(t3,type = "absolute")
 
-
-
-
+# establish the rules
+rules = apriori(t3,
+                parameter = list(supp = .001,
+                                 conf = .01,
+                                 minlen = 2,
+                                 target = "rules"))
+summary(rules)
 
 
 
