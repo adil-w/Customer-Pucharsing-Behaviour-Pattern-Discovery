@@ -18,6 +18,7 @@ location <- read.csv('data/olist_geolocation_dataset.csv')
 p<- left_join(left_join(left_join(customer, order, by = 'customer_id'),order_item,by = 'order_id'),order_product, by = 'product_id')
 transaction <- left_join(p,order_payment, by = "order_id")
 
+
 # clean data 
 skimr::skim(transaction)
 transaction = na.omit(transaction)
@@ -51,11 +52,11 @@ print(fa1, cut=.3)
 
 
 #Assess Fit 
-mf1 = transaction %>% select(price,  product_weight_g, product_height_cm, product_length_cm,
-                         payment_value)
+mf1 = transaction %>% select(freight_value,  product_weight_g,product_length_cm,product_height_cm,
+                         product_width_cm)
 psych::alpha(mf1)
 
 
-
-
+mf2 = transaction %>% select(price,  payment_value)
+psych::alpha(mf2)
 
