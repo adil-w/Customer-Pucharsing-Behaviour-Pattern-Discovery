@@ -37,8 +37,11 @@ plot(x, wss_values,
 plot(x, wss_vals, type="b", main = "Transactions Select K - WSS")
 
 ### cluster plot 
-k = kmeans(j, centers=10, iter.max=25, nstart=25)
+k = kmeans(j, centers=2, iter.max=25, nstart=25)
 fviz_cluster(k, data=j)
+
+k2 = kmeans(j, centers=10, iter.max=25, nstart=25)
+fviz_cluster(k2, data=j)
 
 # function to compute average silhouette for k clusters
 avg_sil <- function(k) {
