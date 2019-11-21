@@ -19,8 +19,12 @@ order <- read.csv('data/olist_orders_dataset.csv')
 order_product <- read.csv('data/olist_products_dataset.csv')
 product <- read.csv('data/olist_products_dataset.csv')
 location <- read.csv('data/olist_geolocation_dataset.csv')
-p<- left_join(left_join(left_join(customer, order, by = 'customer_id'),order_item,by = 'order_id'),order_product, by = 'product_id')
+p<- left_join(left_join(left_join(customer, order, 
+                                  by = 'customer_id'),
+                        order_item,by = 'order_id'),
+              order_product, by = 'product_id')
 transaction <- left_join(p,order_payment, by = "order_id")
+dim(transaction)
 View(transaction)
 length(unique(transaction$customer_id))
 length(unique(transaction$customer_unique_id))
