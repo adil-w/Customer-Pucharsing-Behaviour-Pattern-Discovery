@@ -25,6 +25,9 @@ View(transaction)
 length(unique(transaction$customer_id))
 length(unique(transaction$customer_unique_id))
 
+
+
+
 # choose the variables
 # tr1 = transaction %>% 
 #   select(order_id,product_id,product_category_name) %>% 
@@ -83,6 +86,7 @@ summary(rules1)
 #### Comments:
 # we have a set of 146 rules when we have 0.01% support and 0.01% confidence
 ## sort the rules decreasing by lift - print out the first 5
+
 inspect(head(sort(rules1,decreasing = T, by = "lift"),5))
 ##  We can add other interest measures
 ##  we do this by calculating the measure, and then cbinding it
@@ -100,6 +104,8 @@ inspect(head(rules1,5))
 ## if we wanna visulize the categories purchased at high frequency
 View(transaction)
 
+
+## see whats location infortion abur {moveis_decoracao} => {cama_mesa_banho}
 
 
 

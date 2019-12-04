@@ -12,7 +12,7 @@ library(arules)
 library(arulesViz)
 library(psych)
 library(GPArotation)
-
+library(leaflet)
 
 # load the datasets
 customer <- read.csv('data/olist_customers_dataset.csv')
@@ -25,13 +25,21 @@ order <- read.csv('data/olist_orders_dataset.csv')
 order_product <- read.csv('data/olist_products_dataset.csv')
 product <- read.csv('data/olist_products_dataset.csv')
 location <- read.csv('data/olist_geolocation_dataset.csv')
+sellers <- read.csv('data/olist_sellers_dataset.csv')
 location <- unique(location)
+
+
+location1 = location %>% group_by(geolocation_zip_code_prefix) %>% 
+  summarize(mean_lat = mean(geolocation_lat),
+            mean_long = mean(geolocation_lng))
 
 #######
 p<- left_join(left_join(left_join(customer, order, by = 'customer_id'),order_item,by = 'order_id'),order_product, by = 'product_id')
 transaction <- left_join(p,order_payment, by = "order_id")
-transaction2 <- left_join(transaction,location,
+transaction2 <- left_join(transaction,location1,
                           by = c("customer_zip_code_prefix"="geolocation_zip_code_prefix"))
+transaction2 <- left_join(transaction2,sellers)
+
 
 
 clean_transaction <-na.omit(transaction)
@@ -194,6 +202,10 @@ inspect(rules1)
 ## sort the rules decreasing by lift - print out the first 5
 
 inspect(head(sort(rules1,decreasing = T, by = "lift"),5))
+#{cama_mesa_banho}& {casa_conforto}
+#{casa_conforto}&{cama_mesa_banho}
+
+
 ##  We can add other interest measures
 ##  we do this by calculating the measure, and then cbinding it
 ## to the QUALITY of our rules
@@ -208,14 +220,83 @@ inspect(head(rules1,5))
 
 ## if we wanna visulize the categories purchased at high frequency
 
+## see location information about
+
+select <- transaction2 %>% filter(product_category_name %in% c('casa_conforto','cama_mesa_banho','moveis_decoracao'))
+select <- select %>% select(-customer_id,-customer_unique_id)
 
 
+hist(select$customer_zip_code_prefix)
+ggplot(select, aes(x  = customer_city))+
+  geom_bar()
+
+select %>% group_by(customer_city) %>%
+  count(sort = T) %>%
+  print(15)
+
+select %>% group_by(customer_zip_code_prefix) %>%
+  count(sort = T) %>% 
+  print(15)
+
+###try map
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(select$mean_long,
+                   select$mean_lat,
+                   color = select$product_category_name,
+                   radius = 0.5,
+                   fill = T,
+                   fillOpacity = 0.2,
+                   opacity = 0.6,
+                   popup = paste(select$product_category_name,select$mean_lat,select$mean_long,sep = "")) %>%
+  addLegend("topright",
+            colors = c("#a9a9a9","red", "blue"),
+            labels = c('casa_conforto','cama_mesa_banho','moveis_decoracao'),
+            opacity = 2.0)
+            
+### R will nearly crush by this function, BE CAREFUL
+
+## Can we figure out in which city dilivery time is faster
+delivery <- transaction2 %>% select(customer_zip_code_prefix:customer_state, order_purchase_timestamp:order_estimated_delivery_date,
+                                    product_category_name, mean_lat, mean_long)
+delivery$order_estimated_delivery_date <- as.POSIXct(delivery$order_estimated_delivery_date, format="%Y-%m-%d %H:%M:%S")
+delivery$order_approved_at <- as.POSIXct(delivery$order_approved_at, format="%Y-%m-%d %H:%M:%S")
+delivery$order_delivered_customer_date <- as.POSIXct(delivery$order_delivered_customer_date, format="%Y-%m-%d %H:%M:%S")
+
+delivery$deliverd_difftime <- as.numeric(difftime(delivery$order_delivered_customer_date ,delivery$order_estimated_delivery_date)/3600/24)
+class(delivery$deliverd_difftime)
+hist(delivery$deliverd_difftime)
+
+delivery_late <- delivery %>% filter(deliverd_difftime > 0)
+##is there certain goods/ city have higher possibility to late 
+
+zip_late <- delivery_late %>% group_by(customer_zip_code_prefix) %>% 
+  count(sort = T) %>% 
+
+zip_total <- transaction2 %>% group_by(customer_zip_code_prefix) %>% 
+  count(sort= T)
+
+zip <- left_join(zip_late, zip_total,by = ("customer_zip_code_prefix"))
+zip <- left_join(zip, location1, by = c("customer_zip_code_prefix"='geolocation_zip_code_prefix'))
+zip <- zip %>% mutate(late_rate = n.x/n.y) %>% arrange(late_rate)
+zip %>% filter(late_rate >= 0.3 & n.y >= 10) 
 
 
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(zip$mean_long,
+                   zip$mean_lat,
+                   color = zip$late_rate,
+                   radius = 0.5,
+                   fill = T,
+                   fillOpacity = 0.2,
+                   opacity = 0.6)
 
+### is there any pattern on product catogory? 
+ggplot(delivery_late,aes(x =product_category_name))+
+  geom_bar()
 
-
-
-
-
-
+late_catogories <- delivery_late %>% group_by(product_category_name) %>% 
+  summarise(mean = mean(deliverd_difftime),
+            n = n()) %>% 
+  arrange(desc(mean))
