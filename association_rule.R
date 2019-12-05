@@ -54,7 +54,7 @@ t3 = read.transactions("data/tran3.csv",
 
 
 
-
+View(p)
 
 
 
