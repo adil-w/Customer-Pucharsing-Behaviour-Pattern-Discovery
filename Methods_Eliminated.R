@@ -1,3 +1,47 @@
+library(readr)
+library(tidyverse)
+library(skimr)
+library(dplyr)
+library(purrr)
+library(cluster)
+library(factoextra)
+library(corrplot)
+library(arules)
+library(arulesViz)
+library(psych)
+library(GPArotation)
+library(leaflet)
+library(tm)
+
+customer <- read.csv('data/olist_customers_dataset.csv')
+order_item <- read.csv('data/olist_order_items_dataset.csv')
+customer <- read.csv('data/olist_customers_dataset.csv')
+order_item <- read.csv('data/olist_order_items_dataset.csv')
+order_payment <- read.csv('data/olist_order_payments_dataset.csv')
+order_reviews <- read.csv('data/olist_order_reviews_dataset.csv')
+order <- read.csv('data/olist_orders_dataset.csv')
+order_product <- read.csv('data/olist_products_dataset.csv')
+product <- read.csv('data/olist_products_dataset.csv')
+location <- read.csv('data/olist_geolocation_dataset.csv')
+sellers <- read.csv('data/olist_sellers_dataset.csv')
+location <- unique(location)
+
+
+location1 = location %>% group_by(geolocation_zip_code_prefix) %>% 
+  summarize(mean_lat = mean(geolocation_lat),
+            mean_long = mean(geolocation_lng))
+
+
+p<- left_join(left_join(left_join(customer, order),order_item),order_product)
+transaction <- left_join(p,order_payment)
+transaction <- left_join(transaction,location1,
+                         by = c("customer_zip_code_prefix"="geolocation_zip_code_prefix"))
+transaction <- left_join(transaction,sellers)
+
+clean_transaction <-na.omit(transaction)
+nume_tra= clean_transaction %>% select(-customer_zip_code_prefix, -order_item_id,-customer_id, -customer_unique_id, -customer_city, -customer_city, 
+                                       -customer_state,-order_id:-order_estimated_delivery_date, 
+                                       -product_id:-shipping_limit_date, -product_category_name, -payment_type, -payment_installments)
 ## PCA
 # Keep only numerica columns
 # Clean missing values
