@@ -300,3 +300,35 @@ late_catogories <- delivery_late %>% group_by(product_category_name) %>%
   summarise(mean = mean(deliverd_difftime),
             n = n()) %>% 
   arrange(desc(mean))
+
+## Text Analysis
+View(order_reviews)
+names(order_reviews)
+order_reviews = na.omit(order_reviews)
+order_reviews$review_comment_message = tolower(order_reviews$review_comment_message)
+order_reviews1 <- order_reviews %>%
+  unnest_tokens(token, review_comment_message) 
+stopwords::stopwords_getsources() 
+stopwords::stopwords_getlanguages("snowball") 
+stopwords::stopwords_getlanguages("stopwords-iso") 
+stopwords::stopwords_getlanguages("smart") 
+order_reviews2 <- order_reviews1 %>%
+  anti_join(get_stopwords(), by = c('token' = 'word')) 
+order_reviews_sum <- order_reviews2 %>%
+  group_by(token) %>%
+  count(sort = T)
+
+## Word Cloud Plot
+wordcloud(words = order_reviews_sum$token,
+          freq = order_reviews_sum$n, min.freq = 10, max.words = 50)
+
+## LDA model
+order_reviews_corpus <- corpus(order_reviews$review_comment_message) 
+summary(order_reviews_corpus, n = 20, showmeta = T) 
+order_reviews_dfm <- dfm(order_reviews_corpus,remove_punct= T,remove = stopwords(), remove_numbers= T, remove_symbols= T) %>%
+  dfm_trim(min_termfreq = 2, max_docfreq = .5,
+           docfreq_type = "prop") 
+order_reviews_dtm <- convert(order_reviews_dfm, 'topicmodels')
+order_reviews_lda <- LDA(order_reviews_dtm, k = 2, control = list(seed = 729))
+terms(order_reviews_lda, 10)
+
