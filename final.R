@@ -245,3 +245,35 @@ cate_filter <- cate %>% filter(total >= 1000)
 
 
 
+## Clustering
+##  choose numerical value
+transac = transaction2 %>% select("payment_installments","payment_sequential",
+                                  "product_weight_g","freight_value","payment_value",)
+transaction2_clean = na.omit(transac)
+t_k = transaction2_clean
+
+### scale the data
+j = scale(t_k)
+
+### WSS analysis
+k_wss = function(k) {
+  km = kmeans(j, k, nstart=25, iter=25)
+  kwss = km$tot.withinss
+  return(kwss)
+}
+
+x = 1:15
+wss_vals = map_dbl(x, k_wss)
+
+plot(x, wss_vals,
+     type="b", pch = 19, frame = FALSE,
+     main= "Transactions Select K - WSS",
+     xlab= "Number of clusters K",
+     ylab= "Total within-clusters sum of squares")
+
+plot(x, wss_vals, type="b", main = "Transactions Select K - WSS")
+
+### cluster plot 
+k = kmeans(j, centers=4, iter.max=25, nstart=25)
+fviz_cluster(k, data=j)
+###########################################################################

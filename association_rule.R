@@ -146,7 +146,7 @@ View(transaction)
 # summary(rules)
 
 
-
+View(p)
 
 
 
