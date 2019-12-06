@@ -282,7 +282,7 @@ cate <- cate %>% mutate(ratio = late/total) %>%
 cate_filter <- cate %>% filter(total >= 1000)
 ### we can choose some different criterion
 
-## Supply Side
+## Supply Side - applied for SCM
 supply <- transaction %>% 
   select(seller_city, customer_city, price) %>% 
   na.omit()
@@ -298,6 +298,19 @@ supply %>%
 # 1 londrina      vitoria                   6729 
 # 2 goiania       marilia                   6499 
 # 3 sao paulo     bom jesus do galho        4100.
+
+
+## But things are not that simple.
+## When it comes to the logistic transportation or inventory management,
+## the size and weight of the products are also important.
+
+## Payment Method - applied for the markeing/ opeartion
+payment <- transaction %>% 
+  select(customer_unique_id, price, freight_value, product_category_name, payment_type,
+         payment_value)
+
+
+
 
 
 ## Clustering
