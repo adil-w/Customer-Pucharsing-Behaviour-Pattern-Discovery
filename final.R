@@ -45,17 +45,17 @@ p<- left_join(left_join(left_join(customer, order),order_item),order_product)
 transaction <- left_join(p,order_payment)
 transaction1 <- left_join(transaction,location1,
                           by = c("customer_zip_code_prefix"="geolocation_zip_code_prefix"))
-transaction2 <- left_join(transaction1,sellers)
-transaction3 <-na.omit(transaction2)
+transaction2 <- na.omit(left_join(transaction1,sellers))
 
-transaction <- transaction3 %>%
-  mutate(major_state = if_else(seller_state == c('SP','RJ','MG','BA','PA','PE'), '1', '0'))
+transaction <- transaction2 %>%
+  mutate(major_state = if_else(customer_state == c('SP','RJ','MG','BA','PA','PE'), 1, 0))
 
 transaction$order_estimated_delivery_date <- as.POSIXct(transaction$order_estimated_delivery_date, format="%Y-%m-%d %H:%M:%S")
 transaction$order_approved_at <- as.POSIXct(transaction$order_approved_at, format="%Y-%m-%d %H:%M:%S")
 transaction$order_delivered_customer_date <- as.POSIXct(transaction$order_delivered_customer_date, format="%Y-%m-%d %H:%M:%S")
 transaction$deliverd_difftime <- as.numeric(difftime(transaction$order_delivered_customer_date ,transaction$order_estimated_delivery_date)/3600/24)
 
+transaction <- na.omit(transaction)
 
 
 
@@ -310,39 +310,45 @@ payment <- transaction %>%
          payment_value)
 
 
-
-
-
 ## Clustering
 
 ##  choose numerical value
 transac = transaction %>% select("payment_installments","payment_sequential",
-                                  "product_weight_g","freight_value","payment_value") %>% 
-                          na.omit()
+                                 "product_weight_g","freight_value","payment_value","deliverd_difftime")
 t_k = transac
 
 ### scale the data
 j = scale(t_k)
 
-### WSS analysis
-k_wss = function(k) {
-  km = kmeans(j, k, nstart=25, iter=25)
-  kwss = km$tot.withinss
-  return(kwss)
-}
-
-x = 1:15
-wss_vals = map_dbl(x, k_wss)
-
-plot(x, wss_vals,
-     type="b", pch = 19, frame = FALSE,
-     main= "Transactions Select K - WSS",
-     xlab= "Number of clusters K",
-     ylab= "Total within-clusters sum of squares")
-
-plot(x, wss_vals, type="b", main = "Transactions Select K - WSS")
-
 ### cluster plot 
 k = kmeans(j, centers=4, iter.max=25, nstart=25)
 fviz_cluster(k, data=j)
+
+merge <- cbind(transac, cluster = k$cluster, major = transaction$major_state, state = transaction$customer_state)
+con <- merge %>% group_by(cluster) %>% 
+  summarise(weight=mean(product_weight_g),
+            payment_value = mean(payment_value),
+            timedif = mean(deliverd_difftime),
+            payment_installments = mean(payment_installments),
+            major_state = mean(major))
+
+cluster1 <- merge %>% filter(cluster == 1)
+cluster2 <- merge %>% filter(cluster == 2)            
+cluster3 <- merge %>% filter(cluster == 3) 
+cluster4 <- merge %>% filter(cluster == 4)
+
+state1 <- as.data.frame(table(cluster1$state))
+state2 <- as.data.frame(table(cluster2$state))
+state3 <- as.data.frame(table(cluster3$state))
+state4 <- as.data.frame(table(cluster4$state))
+
+top5 <- state4[state4$Freq %in% tail(sort(state4$Freq),5),] 
+
+ggplot(top5, aes(x=reorder(Var1,Freq), y=Freq, fill=Var1))+
+  geom_bar(position = 'stack', stat = 'identity')+
+  scale_fill_discrete(name = "City", labels = c('Minas Gerais','Paraná','Rio de Janeiro','Rio Grande do Sul','São Paulo'))+
+  labs(title = "City Buy Most Valuable Products", 
+       x = "City")+
+  scale_fill_manual(values=c("#fec44f", "#56B1F7","#E69F00","#addd8e","#fc9272"))
+
 ###########################################################################
