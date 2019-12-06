@@ -100,45 +100,127 @@ inspect(head(sort(rules1,decreasing = T, by = "lift"),5))
 #{casa_conforto}&{cama_mesa_banho}
 
 
-## Conclusion: seems we can not get meaningful association rules 
-## see is there any location relatedabout
+## Conclusion: seems we can not get meaningful association rules,
+## We want to discover some other interesting patterns from transaction dataset.
 
+
+#########################################
+## Discover Patterns
+
+## Get to know our customers purchasing behaviours
+# The distribution of customers purchasing products in 3 categories:
+# home_comfort, bed table bath, furniture_decoration
+# whether there are any location pattern
 rules_geo <- transaction %>% 
-  filter(product_category_name %in% c('casa_conforto','cama_mesa_banho','moveis_decoracao'))
+  filter(product_category_name %in% c('casa_conforto','cama_mesa_banho',
+                                      'moveis_decoracao'))
 rules_geo <- rules_geo %>% select(-customer_id,-customer_unique_id)
-
-
-### to check city pattern
-select %>% group_by(customer_city) %>%
+# to check city pattern
+rules_geo %>% group_by(customer_city) %>%
   count(sort = T) %>%
   print(15)
-
-select %>% group_by(customer_zip_code_prefix) %>%
+rules_geo %>% group_by(customer_zip_code_prefix) %>%
   count(sort = T) %>% 
   print(15)
-
-##comments: it may make no sense beacuse the rio and san polo is also the cities with most transactions
-
+## comments: The top two 2 cities are sao paulo(3602) and rio de janeiro(1595). 
 ###try map
 leaflet() %>%
   addTiles() %>%
-  addCircleMarkers(select$mean_long,
-                   select$mean_lat,
-                   color = select$product_category_name,
+  addCircleMarkers(rules_geo$mean_long,
+                   rules_geo$mean_lat,
+                   color = rules_geo$product_category_name,
                    radius = 0.5,
                    fill = T,
                    fillOpacity = 0.2,
                    opacity = 0.6,
-                   popup = paste(select$product_category_name,select$mean_lat,select$mean_long,sep = "")) %>%
+                   popup = paste(rules_geo$product_category_name,
+                                 rules_geo$mean_lat,rules_geo$mean_long,sep = "")) %>%
   addLegend("topright",
             colors = c("#a9a9a9","red", "blue"),
             labels = c('casa_conforto','cama_mesa_banho','moveis_decoracao'),
             opacity = 2.0)
-
 ### I DONT THINK this pattern works     
 ### R will nearly crush by this function, BE CAREFUL
 
 
+## The Dilivery Process
+# Can we figure out in which city has shorter dilivery time
+delivery <- transaction %>% 
+  select(customer_zip_code_prefix:customer_state, order_purchase_timestamp:order_estimated_delivery_date,
+         product_category_name, mean_lat, mean_long)
+delivery$order_estimated_delivery_date <- as.POSIXct(delivery$order_estimated_delivery_date, format="%Y-%m-%d %H:%M:%S")
+delivery$order_approved_at <- as.POSIXct(delivery$order_approved_at, format="%Y-%m-%d %H:%M:%S")
+delivery$order_delivered_customer_date <- as.POSIXct(delivery$order_delivered_customer_date, format="%Y-%m-%d %H:%M:%S")
+delivery$deliverd_difftime <- as.numeric(difftime(delivery$order_delivered_customer_date ,delivery$order_estimated_delivery_date)/3600/24)
+hist(delivery$deliverd_difftime)
+delivery_late <- delivery %>% filter(deliverd_difftime > 0)
+head(delivery_late)
+delivery_late %>% 
+  group_by(customer_city) %>% 
+  summarise(late_deliver_city = mean(deliverd_difftime)) %>% 
+  arrange(desc(late_deliver_city)) %>%
+  print(n=15)
+# Commits: The top 6 cities that have largest develiery late are
+# 1 montanha                        182. 
+# 2 perdizes                        163. 
+# 3 macapa                          145. 
+# 4 novo brasil                     127. 
+# 5 quintana                        122. 
+# 6 santaluz  
+##is there certain goods/ city have higher possibility to late 
+zip_late <- delivery_late %>% group_by(customer_zip_code_prefix) %>% 
+  count(sort = T) %>% 
+  zip_total <- transaction2 %>% group_by(customer_zip_code_prefix) %>% 
+  count(sort= T)
+
+zip <- left_join(zip_late, zip_total,by = ("customer_zip_code_prefix"))
+zip <- left_join(zip, location1, by = c("customer_zip_code_prefix"='geolocation_zip_code_prefix'))
+zip <- zip %>% mutate(late_rate = n.x/n.y) %>% arrange(late_rate)
+
+## make total order more than 20 and late rate more than 0.3
+zip_filter <- zip %>% filter(late_rate >= 0.2& n.y >= 10) 
+leaflet() %>%
+  addTiles() %>%
+  addCircleMarkers(zip_filter$mean_long,
+                   zip_filter$mean_lat,
+                   color = zip$late_rate,
+                   radius = 0.5,
+                   fill = T,
+                   fillOpacity = 0.2,
+                   opacity = 0.6)
+
+##conclusion: is look like rural area may have more delay 
+
+### is there any pattern on product catogory? 
+ggplot(delivery_late,aes(x =product_category_name))+
+  geom_bar()
+delivery_late %>% 
+  group_by(product_category_name) %>% 
+  summarise(late_deliver_cat = mean(deliverd_difftime)) %>% 
+  arrange(desc(late_deliver_cat)) %>%
+  print(n=15)
+# Commits: The top 3 cities that have largest develiery late are
+# 1 eletrodomesticos_2                    19.9
+# 2 moveis_colchao_e_estofado             15.7
+# 3 climatizacao                          15.1
+
+### to see catogrial pattern
+late_categories <- delivery_late %>% group_by(product_category_name) %>% 
+  summarise(mean = mean(deliverd_difftime),
+            late = n()) %>% 
+  arrange(desc(late))
+category <- transaction %>% 
+  group_by(product_category_name) %>% 
+  summarise(total = n()) %>%
+  arrange(desc(total))
+cate <- left_join(late_categories, category)  
+cate <- cate %>% mutate(ratio = late/total) %>% 
+  arrange(desc(ratio))
+cate_filter <- cate %>% filter(total >= 1000)
+### we can choose some different criterion
+
+
+######################################
 ## Text Analysis
 View(order_reviews)
 names(order_reviews)
@@ -180,71 +262,8 @@ order_reviews_lda <- LDA(order_reviews_dtm, k = 2, control = list(seed = 729))
 terms(order_reviews_lda, 10)
 
 
-## Can we figure out in which city dilivery time is faster
-delivery <- transaction %>% 
-  select(customer_zip_code_prefix:customer_state, order_purchase_timestamp:order_estimated_delivery_date,
-                                    product_category_name, mean_lat, mean_long)
-delivery$order_estimated_delivery_date <- as.POSIXct(delivery$order_estimated_delivery_date, format="%Y-%m-%d %H:%M:%S")
-delivery$order_approved_at <- as.POSIXct(delivery$order_approved_at, format="%Y-%m-%d %H:%M:%S")
-delivery$order_delivered_customer_date <- as.POSIXct(delivery$order_delivered_customer_date, format="%Y-%m-%d %H:%M:%S")
 
-delivery$deliverd_difftime <- as.numeric(difftime(delivery$order_delivered_customer_date ,delivery$order_estimated_delivery_date)/3600/24)
-hist(delivery$deliverd_difftime)
-
-delivery_late <- delivery %>% filter(deliverd_difftime > 0)
-
-##is there certain goods/ city have higher possibility to late 
-zip_late <- delivery_late %>% group_by(customer_zip_code_prefix) %>% 
-  count(sort = T) %>% 
-
-zip_total <- transaction2 %>% group_by(customer_zip_code_prefix) %>% 
-  count(sort= T)
-
-zip <- left_join(zip_late, zip_total,by = ("customer_zip_code_prefix"))
-zip <- left_join(zip, location1, by = c("customer_zip_code_prefix"='geolocation_zip_code_prefix'))
-zip <- zip %>% mutate(late_rate = n.x/n.y) %>% arrange(late_rate)
-
-## make total order more than 20 and late rate more than 0.3
-zip_filter <- zip %>% filter(late_rate >= 0.2& n.y >= 10) 
-
-
-leaflet() %>%
-  addTiles() %>%
-  addCircleMarkers(zip_filter$mean_long,
-                   zip_filter$mean_lat,
-                   color = zip$late_rate,
-                   radius = 0.5,
-                   fill = T,
-                   fillOpacity = 0.2,
-                   opacity = 0.6)
-
-##conclusion: is look like rural erea may have more delay 
-
-### is there any pattern on product catogory? 
-ggplot(delivery_late,aes(x =product_category_name))+
-  geom_bar()
-
-### too see catogrial pattern
-late_categories <- delivery_late %>% group_by(product_category_name) %>% 
-  summarise(mean = mean(deliverd_difftime),
-            late = n()) %>% 
-  arrange(desc(late))
-
-category <- transaction %>% 
-  group_by(product_category_name) %>% 
-  summarise(total = n()) %>%
-  arrange(desc(total))
-
-cate <- left_join(late_categories, category)  
-cate <- cate %>% mutate(ratio = late/total) %>% 
-  arrange(desc(ratio))
-
-cate_filter <- cate %>% filter(total >= 1000)
-
-### we can choose some different criterion
-
-
-
+##########################################
 ## Clustering
 ##  choose numerical value
 transac = transaction2 %>% select("payment_installments","payment_sequential",
