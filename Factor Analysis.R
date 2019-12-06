@@ -21,10 +21,13 @@ transaction <- left_join(p,order_payment, by = "order_id")
 # clean data 
 skimr::skim(transaction)
 transaction = na.omit(transaction)
+dim(transaction)
 transaction = transaction %>%  select(-customer_id, -customer_unique_id, -customer_city, -customer_city, 
        -customer_state,-order_id:-order_estimated_delivery_date, 
        -product_id:-shipping_limit_date, -product_category_name, - payment_type, - order_item_id )
-
+dim(transaction)
+View(transaction)
+names(transaction)
 
 # Data Assessment 
 transaction_cor = cor(transaction)
