@@ -219,6 +219,26 @@ cate <- cate %>% mutate(ratio = late/total) %>%
 cate_filter <- cate %>% filter(total >= 1000)
 ### we can choose some different criterion
 
+## Supply Side
+supply <- transaction %>% 
+  select(seller_city, customer_city, price) %>% 
+  na.omit()
+# We wanna analyze the goods transportaition between cities
+# weighted by the value of the goods
+supply %>% 
+  group_by(seller_city,customer_city) %>%
+  summarise(ave_price = mean(price)) %>% 
+  ungroup() %>% 
+  arrange(desc(ave_price)) %>% 
+  print(n=15)
+## Commits: Top 3 pairs
+# 1 londrina      vitoria                   6729 
+# 2 goiania       marilia                   6499 
+# 3 sao paulo     bom jesus do galho        4100.
+
+
+
+
 
 ######################################
 ## Text Analysis
