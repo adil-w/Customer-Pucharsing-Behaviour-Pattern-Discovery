@@ -43,12 +43,24 @@ location1 = location %>% group_by(geolocation_zip_code_prefix) %>%
 
 p<- left_join(left_join(left_join(customer, order),order_item),order_product)
 transaction <- left_join(p,order_payment)
-transaction <- left_join(transaction,location1,
+transaction1 <- left_join(transaction,location1,
                           by = c("customer_zip_code_prefix"="geolocation_zip_code_prefix"))
-transaction <- left_join(transaction,sellers)
+transaction2 <- left_join(transaction1,sellers)
+transaction3 <-na.omit(transaction2)
 
-clean_transaction <-na.omit(transaction)
-nume_tra= clean_transaction %>% select(-customer_zip_code_prefix, -order_item_id,-customer_id, -customer_unique_id, -customer_city, -customer_city, 
+transaction <- transaction3 %>%
+  mutate(major_state = if_else(seller_state == c('SP','RJ','MG','BA','PA','PE'), '1', '0'))
+
+transaction$order_estimated_delivery_date <- as.POSIXct(transaction$order_estimated_delivery_date, format="%Y-%m-%d %H:%M:%S")
+transaction$order_approved_at <- as.POSIXct(transaction$order_approved_at, format="%Y-%m-%d %H:%M:%S")
+transaction$order_delivered_customer_date <- as.POSIXct(transaction$order_delivered_customer_date, format="%Y-%m-%d %H:%M:%S")
+transaction$deliverd_difftime <- as.numeric(difftime(transaction$order_delivered_customer_date ,transaction$order_estimated_delivery_date)/3600/24)
+
+
+
+
+
+nume_tra= transaction %>% select(-customer_zip_code_prefix, -order_item_id,-customer_id, -customer_unique_id, -customer_city, -customer_city, 
                                       -customer_state,-order_id:-order_estimated_delivery_date, 
                                       -product_id:-shipping_limit_date, -product_category_name, -payment_type, -payment_installments)
 
@@ -180,17 +192,15 @@ order_reviews_lda <- LDA(order_reviews_dtm, k = 2, control = list(seed = 729))
 terms(order_reviews_lda, 10)
 
 
-## Can we figure out in which city dilivery time is faster
+
+
+
+
+
 delivery <- transaction %>% 
   select(customer_zip_code_prefix:customer_state, order_purchase_timestamp:order_estimated_delivery_date,
-                                    product_category_name, mean_lat, mean_long)
-delivery$order_estimated_delivery_date <- as.POSIXct(delivery$order_estimated_delivery_date, format="%Y-%m-%d %H:%M:%S")
-delivery$order_approved_at <- as.POSIXct(delivery$order_approved_at, format="%Y-%m-%d %H:%M:%S")
-delivery$order_delivered_customer_date <- as.POSIXct(delivery$order_delivered_customer_date, format="%Y-%m-%d %H:%M:%S")
-
-delivery$deliverd_difftime <- as.numeric(difftime(delivery$order_delivered_customer_date ,delivery$order_estimated_delivery_date)/3600/24)
+         product_category_name, mean_lat, mean_long)
 hist(delivery$deliverd_difftime)
-
 delivery_late <- delivery %>% filter(deliverd_difftime > 0)
 
 ##is there certain goods/ city have higher possibility to late 
@@ -246,11 +256,12 @@ cate_filter <- cate %>% filter(total >= 1000)
 
 
 ## Clustering
+
 ##  choose numerical value
-transac = transaction2 %>% select("payment_installments","payment_sequential",
-                                  "product_weight_g","freight_value","payment_value",)
-transaction2_clean = na.omit(transac)
-t_k = transaction2_clean
+transac = transaction %>% select("payment_installments","payment_sequential",
+                                  "product_weight_g","freight_value","payment_value") %>% 
+                          na.omit()
+t_k = transac
 
 ### scale the data
 j = scale(t_k)
