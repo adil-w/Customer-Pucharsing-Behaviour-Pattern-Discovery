@@ -200,6 +200,7 @@ order_reviews1 <- order_reviews %>%
   unnest_tokens(token, review_comment_message) 
 stopwords::stopwords_getsources() 
 stopwords("portuguese")
+head(stopwords("portuguese"))
 #order_reviews <- tm_map(order_reviews, removeWords, as.data.frame(stopwords("portuguese")))
 stopwords::stopwords_getlanguages("misc") 
 stopwords::stopwords_getlanguages("snowball") 
@@ -217,6 +218,8 @@ wordcloud(words = order_reviews_sum$token,
 
 ## LDA model
 order_reviews_corpus <- corpus(order_reviews$review_comment_message) 
+order_reviews_corpus1 <- tm_map(order_reviews_corpus, removeWords, c("de", "o", "que", "e"))
+
 summary(order_reviews_corpus, n = 20, showmeta = T) 
 order_reviews_dfm <- dfm(order_reviews_corpus,remove_punct= T,remove = stopwords(), remove_numbers= T, remove_symbols= T) %>%
   dfm_trim(min_termfreq = 2, max_docfreq = .5,
