@@ -155,7 +155,6 @@ leaflet() %>%
 ### R will nearly crush by this function, BE CAREFUL
 
 
-<<<<<<< HEAD
 ## Text Analysis
 View(order_reviews)
 names(order_reviews)
@@ -205,7 +204,7 @@ terms(order_reviews_lda, 10)
 delivery <- transaction %>% 
   select(customer_zip_code_prefix:customer_state, order_purchase_timestamp:order_estimated_delivery_date,
          product_category_name, mean_lat, mean_long)
-=======
+
 ## The Dilivery Process
 # Can we figure out in which city has shorter dilivery time
 delivery <- transaction %>% 
@@ -215,7 +214,7 @@ delivery$order_estimated_delivery_date <- as.POSIXct(delivery$order_estimated_de
 delivery$order_approved_at <- as.POSIXct(delivery$order_approved_at, format="%Y-%m-%d %H:%M:%S")
 delivery$order_delivered_customer_date <- as.POSIXct(delivery$order_delivered_customer_date, format="%Y-%m-%d %H:%M:%S")
 delivery$deliverd_difftime <- as.numeric(difftime(delivery$order_delivered_customer_date ,delivery$order_estimated_delivery_date)/3600/24)
->>>>>>> a51fb8286355b16dd18ae5efd291c5dbbf788a99
+
 hist(delivery$deliverd_difftime)
 delivery_late <- delivery %>% filter(deliverd_difftime > 0)
 head(delivery_late)
@@ -301,53 +300,6 @@ supply %>%
 # 3 sao paulo     bom jesus do galho        4100.
 
 
-
-
-
-######################################
-## Text Analysis
-View(order_reviews)
-names(order_reviews)
-order_reviews = na.omit(order_reviews)
-order_reviews$review_comment_message = tolower(order_reviews$review_comment_message)
-order_reviews1 <- order_reviews %>%
-  unnest_tokens(token, review_comment_message) 
-
-stopwords::stopwords_getsources() 
-stopwords("portuguese")
-
-#order_reviews <- tm_map(order_reviews, removeWords, as.data.frame(stopwords("portuguese")))
-stopwords::stopwords_getlanguages("misc") 
-stopwords::stopwords_getlanguages("snowball") 
-stopwords::stopwords_getlanguages("stopwords-iso") 
-stopwords::stopwords_getlanguages("smart") 
-
-order_reviews2 <- order_reviews1 %>%
-  anti_join(get_stopwords(), by = c('token' = 'word')) 
-order_reviews_sum <- order_reviews2 %>%
-  group_by(token) %>%
-  count(sort = T)
-
-## Word Cloud Plot
-wordcloud(words = order_reviews_sum$token,
-          freq = order_reviews_sum$n, min.freq = 10, max.words = 50)
-
-## there is Chinese word, interesting....
-
-
-## LDA model
-order_reviews_corpus <- corpus(order_reviews$review_comment_message) 
-summary(order_reviews_corpus, n = 20, showmeta = T) 
-order_reviews_dfm <- dfm(order_reviews_corpus,remove_punct= T,remove = stopwords(), remove_numbers= T, remove_symbols= T) %>%
-  dfm_trim(min_termfreq = 2, max_docfreq = .5,
-           docfreq_type = "prop") 
-order_reviews_dtm <- convert(order_reviews_dfm, 'topicmodels')
-order_reviews_lda <- LDA(order_reviews_dtm, k = 2, control = list(seed = 729))
-terms(order_reviews_lda, 10)
-
-
-
-##########################################
 ## Clustering
 
 ##  choose numerical value
