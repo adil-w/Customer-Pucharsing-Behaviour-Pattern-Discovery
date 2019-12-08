@@ -18,6 +18,7 @@ library(tm)
 library(wordcloud)
 library(quanteda)
 library(topicmodels)
+library(ggplot2)
 
 # load the datasets
 customer <- read.csv('data/olist_customers_dataset.csv')
@@ -39,9 +40,6 @@ location1 = location %>% group_by(geolocation_zip_code_prefix) %>%
 
 ### join all the dataset. 
 
-##p<- left_join(left_join(left_join(customer, order, by = 'customer_id'),order_item,by = 'order_id'),order_product, by = 'product_id')
-##transaction <- left_join(p,order_payment, by = "order_id")
-
 p<- left_join(left_join(left_join(customer, order),order_item),order_product)
 transaction <- left_join(p,order_payment)
 transaction1 <- left_join(transaction,location1,
@@ -57,13 +55,6 @@ transaction$order_delivered_customer_date <- as.POSIXct(transaction$order_delive
 transaction$deliverd_difftime <- as.numeric(difftime(transaction$order_delivered_customer_date ,transaction$order_estimated_delivery_date)/3600/24)
 
 transaction <- na.omit(transaction)
-
-
-
-
-nume_tra= transaction %>% select(-customer_zip_code_prefix, -order_item_id,-customer_id, -customer_unique_id, -customer_city, -customer_city, 
-                                      -customer_state,-order_id:-order_estimated_delivery_date, 
-                                      -product_id:-shipping_limit_date, -product_category_name, -payment_type, -payment_installments)
 
 
 ## Assoction Rule
@@ -162,7 +153,7 @@ names(order_reviews_translated)
 order_reviews = na.omit(order_reviews_translated)
 order_reviews$review_comments = tolower(order_reviews$review_comments)
 order_reviews1 <- order_reviews %>%
-  unnest_tokens(token, review_comment_message) 
+  unnest_tokens(token, review_comments) 
 
 stopwords::stopwords_getsources() 
 stopwords::stopwords_getlanguages("misc") 
@@ -196,15 +187,6 @@ order_reviews_lda <- LDA(order_reviews_dtm, k = 2, control = list(seed = 729))
 terms(order_reviews_lda, 10)
 
 
-
-
-
-
-
-delivery <- transaction %>% 
-  select(customer_zip_code_prefix:customer_state, order_purchase_timestamp:order_estimated_delivery_date,
-         product_category_name, mean_lat, mean_long)
-
 ## The Dilivery Process
 # Can we figure out in which city has shorter dilivery time
 delivery <- transaction %>% 
@@ -228,32 +210,35 @@ delivery_late %>%
 # 2 perdizes                        163. 
 # 3 macapa                          145. 
 ##is there certain goods/ city have higher possibility to late 
+
 zip_late <- delivery_late %>% group_by(customer_zip_code_prefix) %>% 
-  count(sort = T) %>% 
-  zip_total <- transaction2 %>% group_by(customer_zip_code_prefix) %>% 
+  count(sort = T)
+
+zip_total <- transaction2 %>% group_by(customer_zip_code_prefix) %>% 
   count(sort= T)
 
 zip <- left_join(zip_late, zip_total,by = ("customer_zip_code_prefix"))
 zip <- left_join(zip, location1, by = c("customer_zip_code_prefix"='geolocation_zip_code_prefix'))
 zip <- zip %>% mutate(late_rate = n.x/n.y) %>% arrange(late_rate)
 
-## make total order more than 20 and late rate more than 0.3
+## make total order more than 10 and late rate more than 0.3
 zip_filter <- zip %>% filter(late_rate >= 0.2& n.y >= 10) 
 leaflet() %>%
   addTiles() %>%
   addCircleMarkers(zip_filter$mean_long,
                    zip_filter$mean_lat,
                    color = zip$late_rate,
-                   radius = 0.5,
+                   radius = 0.6,
                    fill = T,
-                   fillOpacity = 0.2,
-                   opacity = 0.6)
+                   fillOpacity = 0.3,
+                   opacity = 1)
 
 ##conclusion: is look like rural area may have more delay 
 
 ### is there any pattern on product catogory? 
 ggplot(delivery_late,aes(x =product_category_name))+
   geom_bar()
+
 delivery_late %>% 
   group_by(product_category_name) %>% 
   summarise(late_deliver_cat = mean(deliverd_difftime)) %>% 
@@ -263,20 +248,26 @@ delivery_late %>%
 # 1 eletrodomesticos_2                    19.9
 # 2 moveis_colchao_e_estofado             15.7
 # 3 climatizacao                          15.1
+## but we should consider ratio ratehr than the absolute value. 
+
 
 ### to see catogrial pattern
 late_categories <- delivery_late %>% group_by(product_category_name) %>% 
   summarise(mean = mean(deliverd_difftime),
             late = n()) %>% 
   arrange(desc(late))
+
 category <- transaction %>% 
   group_by(product_category_name) %>% 
   summarise(total = n()) %>%
   arrange(desc(total))
+
 cate <- left_join(late_categories, category)  
 cate <- cate %>% mutate(ratio = late/total) %>% 
   arrange(desc(ratio))
 cate_filter <- cate %>% filter(total >= 1000)
+cate_filter
+
 ### we can choose some different criterion
 
 ## Supply Side - applied for SCM
@@ -329,6 +320,8 @@ con <- merge %>% group_by(cluster) %>%
             payment_installments = mean(payment_installments),
             major_state = mean(major))
 
+
+
 cluster1 <- merge %>% filter(cluster == 1)
 cluster2 <- merge %>% filter(cluster == 2)            
 cluster3 <- merge %>% filter(cluster == 3) 
@@ -343,9 +336,10 @@ top5 <- state4[state4$Freq %in% tail(sort(state4$Freq),5),]
 
 ggplot(top5, aes(x=reorder(Var1,Freq), y=Freq, fill=Var1))+
   geom_bar(position = 'stack', stat = 'identity')+
-  scale_fill_discrete(name = "City", labels = c('Minas Gerais','Paraná','Rio de Janeiro','Rio Grande do Sul','São Paulo'))+
-  labs(title = "City Buy Most Valuable Products", 
-       x = "City")+
-  scale_fill_manual(values=c("#fec44f", "#56B1F7","#E69F00","#addd8e","#fc9272"))
+  labs(title = "Purchasing by State", 
+       subtitle = 'In cluster with most expensive products',
+       x = "State")+ scale_color_brewer(palette="Dark2")+
+  scale_fill_discrete(name = "State", 
+                      labels = c('Minas Gerais','Paraná','Rio de Janeiro','Rio Grande do Sul','São Paulo'))
 
 ###########################################################################
