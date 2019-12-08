@@ -31,6 +31,7 @@ order_product <- read.csv('data/olist_products_dataset.csv')
 product <- read.csv('data/olist_products_dataset.csv')
 location <- read.csv('data/olist_geolocation_dataset.csv')
 sellers <- read.csv('data/olist_sellers_dataset.csv')
+order_reviews_translated <- read.csv("data/Translated_reviews - order_review_translated.csv")
 
 location1 = location %>% group_by(geolocation_zip_code_prefix) %>% 
   summarize(mean_lat = mean(geolocation_lat),
@@ -156,21 +157,14 @@ leaflet() %>%
 
 
 ## Text Analysis
-View(order_reviews)
-names(order_reviews)
-order_reviews = na.omit(order_reviews)
-order_reviews$review_comment_message = tolower(order_reviews$review_comment_message)
+View(order_reviews_translated)
+names(order_reviews_translated)
+order_reviews = na.omit(order_reviews_translated)
+order_reviews$review_comments = tolower(order_reviews$review_comments)
 order_reviews1 <- order_reviews %>%
   unnest_tokens(token, review_comment_message) 
 
 stopwords::stopwords_getsources() 
-stopwords("portuguese")
-<<<<<<< HEAD
-head(stopwords("portuguese"))
-=======
-
->>>>>>> a06ee20a1acb38cb9a544b8e16863ead188ab9eb
-#order_reviews <- tm_map(order_reviews, removeWords, as.data.frame(stopwords("portuguese")))
 stopwords::stopwords_getlanguages("misc") 
 stopwords::stopwords_getlanguages("snowball") 
 stopwords::stopwords_getlanguages("stopwords-iso") 
