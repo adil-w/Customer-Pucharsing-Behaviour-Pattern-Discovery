@@ -396,9 +396,18 @@ reviews_bing = sent_bing2 %>%
 head(reviews_bing)
 
 review_sent1 = inner_join(na.omit(reviews), reviews_bing) 
-review_sent1 %>% select(product_category_name,polarity) %>% 
+s
+desc_review = review_sent1 %>% select(product_category_name,polarity) %>% 
   group_by(product_category_name) %>% summarise(avg_polarity = mean(polarity)) %>% 
   arrange(desc(avg_polarity)) 
+desc_review[1:10,]
 
-ggplot(review_sent1, aes(x=product_category_name, y=polarity)) + geom_boxplot() +
-  labs(title="Sentiment of Reviews by Product") 
+aec_review = review_sent1 %>% select(product_category_name,polarity) %>% 
+  group_by(product_category_name) %>% summarise(avg_polarity = mean(polarity)) %>% 
+  arrange(avg_polarity)
+
+aec_review[1:11,]
+
+
+
+
