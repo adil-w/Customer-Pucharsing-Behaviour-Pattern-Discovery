@@ -346,3 +346,18 @@ ggplot(top5, aes(x=reorder(Var1,Freq), y=Freq, fill=Var1))+
   scale_fill_manual(values=c("#fec44f", "#56B1F7","#E69F00","#addd8e","#fc9272"))
 
 ###########################################################################
+
+### Sentiment 
+review = read_csv("data/Translated_reviews - order_review_translated.csv")
+skimr::skim(review)
+
+reviews = review %>% left_join(order_item) %>% left_join(order_product) %>% 
+  select(order_id, review_creation_date, review_comments, 
+         review_id, review_score, product_id, 
+         product_category_name) 
+
+
+
+
+
+
