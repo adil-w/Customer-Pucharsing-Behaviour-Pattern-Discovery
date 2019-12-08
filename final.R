@@ -223,13 +223,10 @@ delivery_late %>%
   summarise(late_deliver_city = mean(deliverd_difftime)) %>% 
   arrange(desc(late_deliver_city)) %>%
   print(n=15)
-# Commits: The top 6 cities that have largest develiery late are
+# Commits: The top 3 cities that have largest average develiery late are
 # 1 montanha                        182. 
 # 2 perdizes                        163. 
 # 3 macapa                          145. 
-# 4 novo brasil                     127. 
-# 5 quintana                        122. 
-# 6 santaluz  
 ##is there certain goods/ city have higher possibility to late 
 zip_late <- delivery_late %>% group_by(customer_zip_code_prefix) %>% 
   count(sort = T) %>% 
@@ -262,7 +259,7 @@ delivery_late %>%
   summarise(late_deliver_cat = mean(deliverd_difftime)) %>% 
   arrange(desc(late_deliver_cat)) %>%
   print(n=15)
-# Commits: The top 3 cities that have largest develiery late are
+# Commits: The top 3 product category that have largest develiery late are
 # 1 eletrodomesticos_2                    19.9
 # 2 moveis_colchao_e_estofado             15.7
 # 3 climatizacao                          15.1
