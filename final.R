@@ -159,10 +159,10 @@ leaflet() %>%
 ## Text Analysis
 View(order_reviews_translated)
 names(order_reviews_translated)
-order_reviews = na.omit(order_reviews_translated)
-order_reviews$review_comments = tolower(order_reviews$review_comments)
-order_reviews1 <- order_reviews %>%
-  unnest_tokens(token, review_comment_message) 
+order_reviews_translated = na.omit(order_reviews_translated)
+order_reviews_translated$review_comments = tolower(order_reviews_translated$review_comments)
+order_reviews1 <- order_reviews_translated %>%
+  unnest_tokens(token, review_comments) 
 
 stopwords::stopwords_getsources() 
 stopwords::stopwords_getlanguages("misc") 
@@ -180,13 +180,10 @@ order_reviews_sum <- order_reviews2 %>%
 wordcloud(words = order_reviews_sum$token,
           freq = order_reviews_sum$n, min.freq = 10, max.words = 50)
 
-## there is Chinese word, interesting....
 
 
 ## LDA model
-order_reviews_corpus <- corpus(order_reviews$review_comment_message) 
-order_reviews_corpus1 <- tm_map(order_reviews_corpus, removeWords, c("de", "o", "que", "e"))
-
+order_reviews_corpus <- corpus(order_reviews_translated$review_comments)
 summary(order_reviews_corpus, n = 20, showmeta = T) 
 order_reviews_dfm <- dfm(order_reviews_corpus,remove_punct= T,remove = stopwords(), remove_numbers= T, remove_symbols= T) %>%
   dfm_trim(min_termfreq = 2, max_docfreq = .5,
