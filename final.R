@@ -150,9 +150,15 @@ leaflet() %>%
 ## Text Analysis
 View(order_reviews_translated)
 names(order_reviews_translated)
+<<<<<<< HEAD
 order_reviews = na.omit(order_reviews_translated)
 order_reviews$review_comments = tolower(order_reviews$review_comments)
 order_reviews1 <- order_reviews %>%
+=======
+order_reviews_translated = na.omit(order_reviews_translated)
+order_reviews_translated$review_comments = tolower(order_reviews_translated$review_comments)
+order_reviews1 <- order_reviews_translated %>%
+>>>>>>> 3489d5c58bf297b4cdedaa55ce5e671379dfe3f1
   unnest_tokens(token, review_comments) 
 
 stopwords::stopwords_getsources() 
@@ -171,13 +177,10 @@ order_reviews_sum <- order_reviews2 %>%
 wordcloud(words = order_reviews_sum$token,
           freq = order_reviews_sum$n, min.freq = 10, max.words = 50)
 
-## there is Chinese word, interesting....
 
 
 ## LDA model
-order_reviews_corpus <- corpus(order_reviews$review_comment_message) 
-order_reviews_corpus1 <- tm_map(order_reviews_corpus, removeWords, c("de", "o", "que", "e"))
-
+order_reviews_corpus <- corpus(order_reviews_translated$review_comments)
 summary(order_reviews_corpus, n = 20, showmeta = T) 
 order_reviews_dfm <- dfm(order_reviews_corpus,remove_punct= T,remove = stopwords(), remove_numbers= T, remove_symbols= T) %>%
   dfm_trim(min_termfreq = 2, max_docfreq = .5,
@@ -343,3 +346,68 @@ ggplot(top5, aes(x=reorder(Var1,Freq), y=Freq, fill=Var1))+
                       labels = c('Minas Gerais','Paraná','Rio de Janeiro','Rio Grande do Sul','São Paulo'))
 
 ###########################################################################
+
+### Sentiment 
+review = read_csv("data/Translated_reviews - order_review_translated.csv")
+skimr::skim(review)
+
+reviews = review %>% left_join(order_item) %>% left_join(order_product) %>% 
+  select(order_id, review_creation_date, review_comments, 
+         review_id, review_score, product_id, 
+         product_category_name) 
+
+## Exploration 
+reviews %>% group_by(product_category_name) %>% 
+  summarise(avg_rating = mean(review_score)) %>% 
+  arrange(avg_rating)
+
+## lowest products 
+
+reviews$review_comments = str_to_lower(reviews$review_comments)
+
+reviews$review_comments = str_remove_all(reviews$review_comments, "[[:punct:]]")
+
+tidy_review = reviews %>% 
+  unnest_tokens(token, review_comments)
+
+tidy_review2 = tidy_review %>% 
+  anti_join(get_stopwords(), by=c("token" = "word"))
+
+review_tokens = tidy_review2 %>% count(token, sort=T)
+
+af = get_sentiments("afinn")
+tidy_review2 %>%  inner_join(af, by = c("token" = "word"))
+
+sent_bing = inner_join(tidy_review2, get_sentiments("bing"), 
+                       by=c("token" = "word"))
+head(sent_bing)
+sent_bing2 = sent_bing %>% 
+  count(product_id, token, sentiment) %>% 
+  pivot_wider(names_from = sentiment, 
+              values_from = n,
+              values_fill = list(n = 0))
+
+sent_bing2
+reviews_bing = sent_bing2 %>% 
+  group_by(product_id) %>% 
+  summarise(pos = mean(positive),
+            neg = mean(negative)) %>%
+  mutate(polarity = pos - neg)
+head(reviews_bing)
+
+review_sent1 = inner_join(na.omit(reviews), reviews_bing) 
+s
+desc_review = review_sent1 %>% select(product_category_name,polarity) %>% 
+  group_by(product_category_name) %>% summarise(avg_polarity = mean(polarity)) %>% 
+  arrange(desc(avg_polarity)) 
+desc_review[1:10,]
+
+aec_review = review_sent1 %>% select(product_category_name,polarity) %>% 
+  group_by(product_category_name) %>% summarise(avg_polarity = mean(polarity)) %>% 
+  arrange(avg_polarity)
+
+aec_review[1:11,]
+
+
+
+
