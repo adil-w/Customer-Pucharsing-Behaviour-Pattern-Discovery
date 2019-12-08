@@ -356,8 +356,49 @@ reviews = review %>% left_join(order_item) %>% left_join(order_product) %>%
          review_id, review_score, product_id, 
          product_category_name) 
 
+## Exploration 
+reviews %>% group_by(product_category_name) %>% 
+  summarise(avg_rating = mean(review_score)) %>% 
+  arrange(avg_rating)
 
+## lowest products 
 
+reviews$review_comments = str_to_lower(reviews$review_comments)
 
+reviews$review_comments = str_remove_all(reviews$review_comments, "[[:punct:]]")
 
+tidy_review = reviews %>% 
+  unnest_tokens(token, review_comments)
 
+tidy_review2 = tidy_review %>% 
+  anti_join(get_stopwords(), by=c("token" = "word"))
+
+review_tokens = tidy_review2 %>% count(token, sort=T)
+
+af = get_sentiments("afinn")
+tidy_review2 %>%  inner_join(af, by = c("token" = "word"))
+
+sent_bing = inner_join(tidy_review2, get_sentiments("bing"), 
+                       by=c("token" = "word"))
+head(sent_bing)
+sent_bing2 = sent_bing %>% 
+  count(product_id, token, sentiment) %>% 
+  pivot_wider(names_from = sentiment, 
+              values_from = n,
+              values_fill = list(n = 0))
+
+sent_bing2
+reviews_bing = sent_bing2 %>% 
+  group_by(product_id) %>% 
+  summarise(pos = mean(positive),
+            neg = mean(negative)) %>%
+  mutate(polarity = pos - neg)
+head(reviews_bing)
+
+review_sent1 = inner_join(na.omit(reviews), reviews_bing) 
+review_sent1 %>% select(product_category_name,polarity) %>% 
+  group_by(product_category_name) %>% summarise(avg_polarity = mean(polarity)) %>% 
+  arrange(desc(avg_polarity)) 
+
+ggplot(review_sent1, aes(x=product_category_name, y=polarity)) + geom_boxplot() +
+  labs(title="Sentiment of Reviews by Product") 
